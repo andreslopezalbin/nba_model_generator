@@ -26,8 +26,21 @@ class MergeData:
         self.games_dataframe = dataframe
         self.merge()
 
+    def merge(self):
+        games = []
+        for gameId in self.games_dataframe.GAME_ID.unique():
+            # print(gameId, ' : ', frame.loc[frame['GAME_ID'] == gameId])
+            games_by_id = self.games_dataframe.loc[self.games_dataframe['GAME_ID'] == gameId]
+            games.append(self.join_games(games_by_id))
+
+        print('Missing games: ', self.missing_games)
+        print('Saving train dataset, it can take a little bit, be patient :)')
+        train = pd.concat(games, axis=0, ignore_index=True)
+        train.to_csv(r'.\datasets\train.csv')
+        print('Number of games and attrs in train set: ', train.shape)
+        print('DONE')
+
     def join_games(self, games):
-        game_df = pd.DataFrame()
         games = games.reset_index(drop=True)
 
         missing_game = None
@@ -46,22 +59,20 @@ class MergeData:
             visitor = games.loc[1] if not missing_game else missing_game
             home = games.loc[0]
 
-        game_df = pd.DataFrame({'GAME_ID': [games.loc[0].GAME_ID],
-                                'MATCHUP': [games.loc[0].MATCHUP],
-                                'HOME_TEAM': home.get('TEAM_ID', None),
-                                'VISITOR_TEAM': visitor.get('TEAM_ID', None)
-                                })
+        attrs_headers = ['TEAM_ID', 'TEAM_ABBREVIATION', 'TEAM_NAME', 'WL', 'MIN', 'PTS', 'FGM', 'FGA', 'FG_PCT',
+                         'FG3M', 'FG3A', 'FG3_PCT', 'FTM', 'FTA', 'FT_PCT', 'OREB', 'DREB', 'REB', 'AST', 'STL', 'BLK',
+                         'TOV', 'PF', 'PLUS_MINUS']
+
+        attrs_list = {'GAME_ID': [games.loc[0].GAME_ID],
+                      'SEASON_ID': [games.loc[0].SEASON_ID],
+                      'MATCHUP': [games.loc[0].MATCHUP],
+                      'GAME_DATE': [games.loc[0].GAME_DATE],
+                      }
+
+        for attr in attrs_headers:
+            attrs_list['HOME_' + attr] = home.get(attr, None)
+            attrs_list['VISITOR_' + attr] = visitor.get(attr, None)
+
+        game_df = pd.DataFrame(attrs_list)
+
         return game_df
-
-    def merge(self):
-        games = []
-        for gameId in self.games_dataframe.GAME_ID.unique():
-            # print(gameId, ' : ', frame.loc[frame['GAME_ID'] == gameId])
-            games_by_id = self.games_dataframe.loc[self.games_dataframe['GAME_ID'] == gameId]
-            games.append(self.join_games(games_by_id))
-
-        print('Missing games: ', self.missing_games)
-        print('saving train dataset')
-        train = pd.concat(games, axis=0, ignore_index=True)
-        train.to_csv(r'.\datasets\train.csv')
-        print('Number of games and attrs in train set: ', train.shape)
