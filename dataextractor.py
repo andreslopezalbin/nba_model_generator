@@ -38,7 +38,6 @@ class MergeData:
         train = pd.concat(games, axis=0, ignore_index=True)
         train.to_csv(r'.\datasets\train.csv')
         print('Number of games and attrs in train set: ', train.shape)
-        print('DONE')
 
     def join_games(self, games):
         games = games.reset_index(drop=True)
