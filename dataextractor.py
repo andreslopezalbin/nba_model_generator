@@ -41,7 +41,6 @@ class MergeData:
 
     def join_games(self, games):
         games = games.reset_index(drop=True)
-
         missing_game = None
         try:
             games.loc[1]
@@ -60,7 +59,7 @@ class MergeData:
 
         attrs_headers = ['TEAM_ID', 'TEAM_ABBREVIATION', 'TEAM_NAME', 'WL', 'MIN', 'PTS', 'FGM', 'FGA', 'FG_PCT',
                          'FG3M', 'FG3A', 'FG3_PCT', 'FTM', 'FTA', 'FT_PCT', 'OREB', 'DREB', 'REB', 'AST', 'STL', 'BLK',
-                         'TOV', 'PF', 'PLUS_MINUS']
+                         'TOV', 'PF']
 
         attrs_list = {'GAME_ID': [games.loc[0].GAME_ID],
                       'SEASON_ID': [games.loc[0].SEASON_ID],
