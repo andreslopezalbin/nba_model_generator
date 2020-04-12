@@ -132,3 +132,7 @@ dmypy.json
 
 # Serverless directories
 .serverless
+node_modules/
+*.zip
+package-lock.json
+pass.txt

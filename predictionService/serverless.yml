@@ -49,15 +49,23 @@ provider:
 #    variable1: value1
 
 # you can add packaging information here
-#package:
+package:
 #  include:
 #    - include-me.py
 #    - include-me-dir/**
-#  exclude:
+  exclude:
+    - node_modules/**
+
 #    - exclude-me.py
 #    - exclude-me-dir/**
 
 functions:
+  predict:
+    handler: handler.predict
+    layers:
+      - {Ref: PythonRequirementsLambdaLayer}
+    events: # The Events that trigger this Function
+    # - http: post users/create
   hello:
     handler: handler.hello
 #    The following are a few example events you can configure
@@ -111,3 +119,14 @@ functions:
 #     NewOutput:
 #       Description: "Description for the output"
 #       Value: "Some output value"
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    layer: true
+    dockerizePip: true
+    zip: true
+    slim: true
+
