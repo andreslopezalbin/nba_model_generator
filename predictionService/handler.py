@@ -3,6 +3,9 @@ import pymongo
 import pickle
 import pandas as pd
 import numpy as np
+import os
+
+db_url = os.environ['db_url']
 
 
 def hello(event, context):
@@ -21,9 +24,7 @@ def hello(event, context):
 
 def predict(event, context):
     print("connecting to db")
-    client = pymongo.MongoClient(
-        "mongodb+srv://admin:nN9nWsRTD98DKfyQ@cluster0-k0rto.mongodb.net/nbaDB?retryWrites=true&w=majority")
-
+    client = pymongo.MongoClient(db_url)
     nba_models = client.nbaDB.models
     active_model = nba_models.find_one({"active": True})
     print("loading regresor")

@@ -23,6 +23,8 @@ service: predictionservice
 provider:
   name: aws
   runtime: python3.8
+  environment:
+    db_url : 'change_it'
 
 # you can overwrite defaults here
 #  stage: dev
@@ -66,7 +68,7 @@ functions:
       - {Ref: PythonRequirementsLambdaLayer}
     events: # The Events that trigger this Function
     # - http: post users/create
-  hello:
+  train:
     handler: handler.hello
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
@@ -127,6 +129,5 @@ custom:
   pythonRequirements:
     layer: true
     dockerizePip: true
-    zip: true
     slim: true
 
