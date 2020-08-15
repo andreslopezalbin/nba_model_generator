@@ -27,8 +27,8 @@ functions:
     layers:
       - {Ref: PythonRequirementsLambdaLayer}
     timeout: 300 # optional, in seconds, default is 6
-  events:
-      - http: GET train
+    events:
+        - http: GET train
 #    events:
 #      - http:
 #          path: users/create
