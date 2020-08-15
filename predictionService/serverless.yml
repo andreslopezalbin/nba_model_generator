@@ -18,13 +18,17 @@ functions:
     layers:
       - {Ref: PythonRequirementsLambdaLayer}
     timeout: 90
-    events: # The Events that trigger this Function
+    events:
+      - http:
+          path: predict
+          method: post
   train:
     handler: handler.train
     layers:
       - {Ref: PythonRequirementsLambdaLayer}
     timeout: 300 # optional, in seconds, default is 6
-
+  events:
+      - http: GET train
 #    events:
 #      - http:
 #          path: users/create
