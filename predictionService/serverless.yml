@@ -66,7 +66,6 @@ functions:
 
 plugins:
   - serverless-python-requirements
-
 custom:
   pythonRequirements:
     layer: true
