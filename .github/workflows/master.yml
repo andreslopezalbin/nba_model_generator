@@ -13,10 +13,7 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: 3.8
-    - name: npm install
-      uses: actions/npm@master
-      with:
-        args: install
+    - run: npm ci
     - name: Access Source directory
       run: cd predictionService
     - name: serverless deploy
