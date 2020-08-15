@@ -16,7 +16,7 @@ jobs:
     - name: Access Source directory
       run: cd predictionService
     - name: Install node dependencies    
-    - run: npm ci
+      run: npm ci
     - name: serverless deploy
       uses: serverless/github-action@master
       with:
