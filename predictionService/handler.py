@@ -20,8 +20,8 @@ def train(event, context):
     print("Getting S3 object...")
     dataset = s3.get_object(Bucket='nba-datasets-bucket', Key='train.csv')
 
-    train_df = pd.read_csv(io.BytesIO(dataset['Body'].read()))
-    print(train_df.head())
+    train_df = pd.read_csv(io.BytesIO(dataset['Body'].read(), index_col=0))
+    # print(train_df.head())
 
     train_df = train_df[(train_df.HOME_TEAM_ID.notnull()) & (train_df.VISITOR_TEAM_ID.notnull())]
     train_df = train_df.drop(
@@ -56,9 +56,7 @@ def train(event, context):
     score = cross_val_score(regresor, X, y, cv=10, scoring='r2')
     r2 = score.mean()
 
-    print('MAE:', mae)
-    print('MSE:', mse)
-    print('R2:', r2)
+    print('MAE:', mae, ' -- MSE:', mse, ' -- R2:', r2)
 
     pickled_model = pickle.dumps(regresor)
 
@@ -82,9 +80,9 @@ def train(event, context):
         message = ' Better model found. Scores R2: ' + str(r2) + ' --- MAE: ' + str(mae) + ' --- MSE: ' + str(mse)
         print(message)
     else:
-        message = ' Better model NOT found. Active model scores R2: ' + active_model['scores']['R2'] \
-                   + ' --- MAE: ' + active_model['scores']['MAE'] \
-                   + ' --- MSE: ' + active_model['scores']['MSE'] \
+        message = ' Better model NOT found. Active model scores R2: ' + str(active_model['scores']['R2']) \
+                   + ' --- MAE: ' + str(active_model['scores']['MAE']) \
+                   + ' --- MSE: ' + str(active_model['scores']['MSE']) \
                    + ' ### NEW model scores R2: ' + str(r2) \
                    + ' --- MAE: ' + str(mae) \
                    + ' --- MSE: ' + str(mse)
