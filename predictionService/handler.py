@@ -20,7 +20,7 @@ def train(event, context):
     print("Getting S3 object...")
     dataset = s3.get_object(Bucket='nba-datasets-bucket', Key='train.csv')
 
-    train_df = pd.read_csv(io.BytesIO(dataset['Body'].read(), index_col=0))
+    train_df = pd.read_csv(io.BytesIO(dataset['Body'].read()), index_col=0)
     # print(train_df.head())
 
     train_df = train_df[(train_df.HOME_TEAM_ID.notnull()) & (train_df.VISITOR_TEAM_ID.notnull())]
