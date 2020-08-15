@@ -13,9 +13,10 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: 3.8
-    - run: npm ci
     - name: Access Source directory
       run: cd predictionService
+    - name: Install node dependencies    
+    - run: npm ci
     - name: serverless deploy
       uses: serverless/github-action@master
       with:
