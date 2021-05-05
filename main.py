@@ -25,8 +25,7 @@ if __name__ == '__main__':
     if clean:
         train = pd.read_csv('./datasets/train.csv', index_col=0, header=0)
         print(train[0:5])
-        train['HOME_WL'] = train['HOME_WL'].map({'L': 0, 'W': 1})
-        train['VISITOR_WL'] = train['VISITOR_WL'].map({'L': 0, 'W': 1})
+
         train['PLUS_MINUS'] = train['HOME_PTS'] - train['VISITOR_PTS']
 
         train.to_csv(r'.\datasets\train.csv')
@@ -101,22 +100,31 @@ if __name__ == '__main__':
         import datetime
 
         pickled_model = pickle.dumps(regresor)
-
         print("connecting to db")
         client = pymongo.MongoClient(
-            "mongodb+srv://admin:nN9nWsRTD98DKfyQ@cluster0-k0rto.mongodb.net/nbaDB?retryWrites=true&w=majority")
-
+            "mongodb+srv://admin:b5LlXLx9dAUw7amF@cluster0-k0rto.mongodb.net/nbaDB?retryWrites=true&w=majority")
         nba_models = client.nbaDB.models
-
         active_model = nba_models.find_one({"active": True})
-
         active = False
-        if active_model['scores']['R2'] < r2:
-            print('Found a better model')
+        message = ''
+        if active_model is None:
             active = True
-        else:
-            print('Better model NOT found')
+            message = 'Active model not found'
+            print(message)
+        elif active_model['scores']['R2'] < r2:
+            active = True
 
+            nba_models.update_one({'_id': active_model['_id']}, {"$set": {"active": False}})
+            message = ' Better model found. Scores R2: ' + str(r2) + ' --- MAE: ' + str(mae) + ' --- MSE: ' + str(mse)
+            print(message)
+        else:
+            message = ' Better model NOT found. Active model scores R2: ' + str(active_model['scores']['R2']) \
+                      + ' --- MAE: ' + str(active_model['scores']['MAE']) \
+                      + ' --- MSE: ' + str(active_model['scores']['MSE']) \
+                      + ' ### NEW model scores R2: ' + str(r2) \
+                      + ' --- MAE: ' + str(mae) \
+                      + ' --- MSE: ' + str(mse)
+            print(message)
         model = {
             "model": pickled_model,
             "date": datetime.datetime.utcnow(),
@@ -127,14 +135,15 @@ if __name__ == '__main__':
                 "MSE": mse
             }
         }
-
         print('saving model')
         nba_models.insert_one(model)
 
     if predict:
+        import pymongo
+        import pickle
         print("connecting to db")
         client = pymongo.MongoClient(
-            "mongodb+srv://admin:nN9nWsRTD98DKfyQ@cluster0-k0rto.mongodb.net/nbaDB?retryWrites=true&w=majority")
+            "mongodb+srv://admin:b5LlXLx9dAUw7amF@cluster0-k0rto.mongodb.net/nbaDB?retryWrites=true&w=majority")
 
         nba_models = client.nbaDB.models
         active_model = nba_models.find_one({"active": True})

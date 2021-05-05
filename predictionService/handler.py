@@ -16,35 +16,41 @@ db_url = os.environ['db_url']
 
 
 def train(event, context):
+    # Obtencion de los datos de entrenamiento desde el Bucket S3
     s3 = boto3.client('s3')
     print("Getting S3 object...")
     dataset = s3.get_object(Bucket='nba-datasets-bucket', Key='train.csv')
 
+    # Lectura del dataset
     train_df = pd.read_csv(io.BytesIO(dataset['Body'].read()), index_col=0)
-    # print(train_df.head())
 
-    train_df = train_df[(train_df.HOME_TEAM_ID.notnull()) & (train_df.VISITOR_TEAM_ID.notnull())]
+    # Calculo de la clase a predecir
+    train_df['PLUS_MINUS'] = train_df['HOME_PTS'] - train_df['VISITOR_PTS']
+
+    # Limpieza de literales y parámetros que pueden interferir con los resultados del experimento.
     train_df = train_df.drop(
         ['HOME_WL', 'VISITOR_WL', 'HOME_PTS', 'VISITOR_PTS', 'GAME_DATE', 'MATCHUP', 'HOME_TEAM_ABBREVIATION',
          'VISITOR_TEAM_ABBREVIATION', 'HOME_TEAM_NAME', 'VISITOR_TEAM_NAME'], axis=1)
 
+    # Se eliminan los registros que no dispongan de los datos de los dos equipos
     train_df = train_df[(train_df.HOME_TEAM_ID.notnull()) & (train_df.VISITOR_TEAM_ID.notnull())]
     train_df = train_df.astype({'HOME_TEAM_ID': 'int64', 'VISITOR_TEAM_ID': 'int64'})
 
+    # En caso de que una estadística este vacía, esta se rellena con la media del dataset.
     for col in train_df.columns:
         nullsInCol = train_df[col].isna().sum()
-        # print('nulls in col ', col, nullsInCol)
         if nullsInCol > 0:
             media_col = train_df[[col]].mean()
             train_df[col] = train_df[[col]].fillna(media_col)
 
+    # Se recorre cada una de las columnas escalando sus valores.
+    not_standardize = ['GAME_ID', 'SEASON_ID', 'HOME_TEAM_ID', 'VISITOR_TEAM_ID', 'PLUS_MINUS']
+    for col in train_df.columns:
+        if col not in not_standardize:
+            train_df[col] = StandardScaler().fit_transform(train_df[[col]])
+
     y = train_df['PLUS_MINUS']
     X = train_df.drop(['PLUS_MINUS'], axis=1)
-
-    not_standardize = ['GAME_ID', 'SEASON_ID', 'HOME_TEAM_ID', 'VISITOR_TEAM_ID']
-    for col in X.columns:
-        if col not in not_standardize:
-            X[col] = StandardScaler().fit_transform(X[[col]])
 
     regresor = LinearRegression()
     regresor.fit(X, y)
