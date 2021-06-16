@@ -155,7 +155,11 @@ def predict(event, context):
 
     client = pymongo.MongoClient(db_url)
     nba_predictions = client.nbaDB.predictions
-    nba_predictions.insert_one(prediction)
+    nba_predictions.insert_one({
+        "Prediction": ' ,'.join([str(elem) for elem in prediction]),
+        "model": active_model['_id'],
+        "date": datetime.datetime.utcnow(),
+    })
 
     body = {
         "message": "Prediction: " + ' ,'.join([str(elem) for elem in prediction]),
