@@ -152,6 +152,11 @@ def predict(event, context):
 
     print("getting prediction")
     prediction = active_regresor.predict(df)
+
+    client = pymongo.MongoClient(db_url)
+    nba_predictions = client.nbaDB.predictions
+    nba_predictions.insert_one(prediction)
+
     body = {
         "message": "Prediction: " + ' ,'.join([str(elem) for elem in prediction]),
         "input": event
