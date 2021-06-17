@@ -7,7 +7,6 @@ import io
 import datetime
 
 import pandas as pd
-import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import cross_val_score
@@ -15,14 +14,18 @@ from sklearn.model_selection import cross_val_score
 db_url = os.environ['db_url']
 
 
-def train(event, context):
-    # Obtencion de los datos de entrenamiento desde el Bucket S3
-    s3 = boto3.client('s3')
+# Obtencion de los datos de entrenamiento desde el Bucket S3
+def get_dataset():
     print("Getting S3 object...")
-    dataset = s3.get_object(Bucket='nba-datasets-bucket', Key='train.csv')
+    s3 = boto3.client('s3')
+    data = s3.get_object(Bucket='nba-datasets-bucket', Key='train.csv')
+    return pd.read_csv(io.BytesIO(data['Body'].read()), index_col=0)
+
+
+def train(event, context):
 
     # Lectura del dataset
-    train_df = pd.read_csv(io.BytesIO(dataset['Body'].read()), index_col=0)
+    train_df = get_dataset()
 
     # Calculo de la clase a predecir
     train_df['PLUS_MINUS'] = train_df['HOME_PTS'] - train_df['VISITOR_PTS']
@@ -123,6 +126,30 @@ def train(event, context):
 
 
 def predict(event, context):
+
+    df = get_dataset()
+    df = df.drop(
+        ['HOME_WL', 'VISITOR_WL', 'HOME_PTS', 'VISITOR_PTS', 'MATCHUP', 'HOME_TEAM_NAME', 'VISITOR_TEAM_NAME',
+         'PLUS_MINUS'], axis=1)
+
+    local = 'TOR'
+    visitor = 'LAL'
+    local_games = df.loc[df['HOME_TEAM_ABBREVIATION'] == local]
+    local_games = local_games.sort_values(by="GAME_DATE", ascending=False)
+    visitor_games = df.loc[df['VISITOR_TEAM_ABBREVIATION'] == visitor]
+    visitor_games = visitor_games.sort_values(by="GAME_DATE", ascending=False)
+
+    local_games = local_games.drop([col for col in local_games.columns if 'VISITOR_' in col], axis=1)[:10]
+    visitor_games = visitor_games.drop([col for col in local_games.columns if 'HOME_' in col], axis=1)[:10]
+
+    local_games = local_games.drop(['GAME_DATE', 'HOME_TEAM_ABBREVIATION'], axis=1)
+    visitor_games = visitor_games.drop(['GAME_ID', 'SEASON_ID', 'GAME_DATE', 'VISITOR_TEAM_ABBREVIATION'], axis=1)
+
+    columns = [*local_games.columns, *visitor_games.columns]
+    data = [[*local_games.mean(), *visitor_games.mean()]]
+
+    to_predict = pd.DataFrame(data=data, columns=columns)
+
     print("connecting to db")
     client = pymongo.MongoClient(db_url)
     nba_models = client.nbaDB.models
@@ -130,39 +157,22 @@ def predict(event, context):
     print("loading regresor")
     active_regresor = pickle.loads(active_model['model'])
 
-    columns = ['GAME_ID', 'SEASON_ID', 'MATCHUP', 'GAME_DATE', 'HOME_TEAM_ID', 'VISITOR_TEAM_ID',
-               'HOME_TEAM_ABBREVIATION', 'VISITOR_TEAM_ABBREVIATION', 'HOME_TEAM_NAME', 'VISITOR_TEAM_NAME',
-               'HOME_WL', 'VISITOR_WL', 'HOME_MIN', 'VISITOR_MIN', 'HOME_PTS', 'VISITOR_PTS', 'HOME_FGM',
-               'VISITOR_FGM', 'HOME_FGA', 'VISITOR_FGA', 'HOME_FG_PCT', 'VISITOR_FG_PCT', 'HOME_FG3M',
-               'VISITOR_FG3M', 'HOME_FG3A', 'VISITOR_FG3A', 'HOME_FG3_PCT', 'VISITOR_FG3_PCT', 'HOME_FTM',
-               'VISITOR_FTM', 'HOME_FTA', 'VISITOR_FTA', 'HOME_FT_PCT', 'VISITOR_FT_PCT',
-               'HOME_OREB', 'VISITOR_OREB', 'HOME_DREB', 'VISITOR_DREB', 'HOME_REB', 'VISITOR_REB', 'HOME_AST',
-               'VISITOR_AST', 'HOME_STL', 'VISITOR_STL', 'HOME_BLK', 'VISITOR_BLK', 'HOME_TOV', 'VISITOR_TOV',
-               'HOME_PF', 'VISITOR_PF']
-
-    game = [[111, 22019, 'GSW vs. MIA', '10/02/2020', 1610612744, 1610612748, 'GSW', 'MIA', 'Golden State Warriors',
-             'Miami' 'Heat', 'x', 'x', 245, 249.6, 109.2, 116.6, 38.6, 40, 90, 85.8, 0.4308, 0.469, 12.2, 13.8,
-             35.4, 36.8, 0.3362, 0.3868, 19.8, 22.8, 24, 26.8, 0.8208, 0.8568, 9.2, 6.8, 31.8, 36.4, 41, 43.2, 26.8,
-             25.2, 7, 5.8, 4.4, 4.8, 13.2, 13.2, 21.4, 19.2]]
-
-    df = pd.DataFrame(np.array(game), columns=columns)
-    df = df.drop(
-        ['HOME_WL', 'VISITOR_WL', 'HOME_PTS', 'VISITOR_PTS', 'GAME_DATE', 'MATCHUP', 'HOME_TEAM_ABBREVIATION',
-         'VISITOR_TEAM_ABBREVIATION', 'HOME_TEAM_NAME', 'VISITOR_TEAM_NAME'], axis=1)
-
     print("getting prediction")
-    prediction = active_regresor.predict(df)
-
-    client = pymongo.MongoClient(db_url)
+    prediction = active_regresor.predict(to_predict)
+    print("prediction " + ' ,'.join([str(elem) for elem in prediction]))
     nba_predictions = client.nbaDB.predictions
-    nba_predictions.insert_one({
-        "Prediction": ' ,'.join([str(elem) for elem in prediction]),
+    to_save = {
+        "data": to_predict.to_json(orient="index"),
+        "query": local + ' - ' + visitor,
+        "prediction": ' ,'.join([str(elem) for elem in prediction]),
         "model": active_model['_id'],
         "date": datetime.datetime.utcnow(),
-    })
+    }
+
+    nba_predictions.insert_one(to_save)
 
     body = {
-        "message": "Prediction: " + ' ,'.join([str(elem) for elem in prediction]),
+        "message": to_save,
         "input": event
     }
 
