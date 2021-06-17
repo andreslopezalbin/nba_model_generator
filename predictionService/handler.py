@@ -153,7 +153,6 @@ def predict(event, context):
     to_predict = pd.DataFrame(columns=df.columns)
     to_predict = to_predict.append(means, ignore_index=True)
     to_predict = to_predict.drop(['HOME_TEAM_ABBREVIATION', 'VISITOR_TEAM_ABBREVIATION', 'GAME_DATE'], axis=1)
-    to_predict.to_csv(r'to_predict.csv')
 
     print("connecting to db")
     client = pymongo.MongoClient(db_url)
