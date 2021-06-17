@@ -127,52 +127,58 @@ def train(event, context):
 
 def predict(event, context):
 
+    home_team = event['home']
+    visitor_team = event['visitor']
+
     df = get_dataset()
     df = df.drop(
-        ['GAME_ID', 'SEASON_ID', 'HOME_WL', 'VISITOR_WL', 'HOME_PTS', 'VISITOR_PTS', 'MATCHUP', 'HOME_TEAM_NAME',
-         'VISITOR_TEAM_NAME', 'PLUS_MINUS'], axis=1)
+        ['GAME_ID', 'SEASON_ID','HOME_WL', 'VISITOR_WL', 'HOME_PTS', 'VISITOR_PTS', 'MATCHUP', 'HOME_TEAM_NAME',
+         'VISITOR_TEAM_NAME', 'PLUS_MINUS', 'HOME_TEAM_ID', 'VISITOR_TEAM_ID'], axis=1)
 
-    local = event.local
-    visitor = event.visitor
-    local_games = df.loc[df['HOME_TEAM_ABBREVIATION'] == local]
-    local_games = local_games.sort_values(by="GAME_DATE", ascending=False)
-    visitor_games = df.loc[df['VISITOR_TEAM_ABBREVIATION'] == visitor]
-    visitor_games = visitor_games.sort_values(by="GAME_DATE", ascending=False)
+    home_games = df.loc[df['HOME_TEAM_ABBREVIATION'] == home_team ]
+    home_games = home_games.sort_values(by="GAME_DATE", ascending=False)[:10]
 
-    local_games = local_games.drop([col for col in local_games.columns if 'VISITOR_' in col], axis=1)[:10]
-    visitor_games = visitor_games.drop([col for col in local_games.columns if 'HOME_' in col], axis=1)[:10]
+    visitor_games = df.loc[df['VISITOR_TEAM_ABBREVIATION'] == visitor_team]
+    visitor_games = visitor_games.sort_values(by="GAME_DATE", ascending=False)[:10]
 
-    local_games = local_games.drop(['GAME_DATE', 'HOME_TEAM_ABBREVIATION'], axis=1)
-    visitor_games = visitor_games.drop(['GAME_DATE', 'VISITOR_TEAM_ABBREVIATION'], axis=1)
+    means = {}
+    for col in home_games.columns:
+        if 'HOME_' in col and col != 'HOME_TEAM_ABBREVIATION' and col != 'GAME_DATE':
+            means[col] = home_games[col].mean()
 
-    columns = [*local_games.columns, *visitor_games.columns]
-    data = [[*local_games.mean(), *visitor_games.mean()]]
+    for col in visitor_games.columns:
+        if 'VISITOR_' in col and col != 'VISITOR_TEAM_ABBREVIATION' and col != 'GAME_DATE':
+            means[col] = visitor_games[col].mean()
 
-    to_predict = pd.DataFrame(data=data, columns=columns)
+    to_predict = pd.DataFrame(columns=df.columns)
+    to_predict = to_predict.append(means, ignore_index=True)
+    to_predict = to_predict.drop(['HOME_TEAM_ABBREVIATION', 'VISITOR_TEAM_ABBREVIATION', 'GAME_DATE'], axis=1)
+    to_predict.to_csv(r'to_predict.csv')
 
     print("connecting to db")
     client = pymongo.MongoClient(db_url)
     nba_models = client.nbaDB.models
     active_model = nba_models.find_one({"active": True})
+
     print("loading regresor")
     active_regresor = pickle.loads(active_model['model'])
 
     print("getting prediction")
     prediction = active_regresor.predict(to_predict)
     print("prediction " + ' ,'.join([str(elem) for elem in prediction]))
-    nba_predictions = client.nbaDB.predictions
     to_save = {
         "data": to_predict.to_json(orient="index"),
-        "query": local + ' - ' + visitor,
+        "query": home_team + ' - ' + visitor_team,
         "prediction": ' ,'.join([str(elem) for elem in prediction]),
         "model": active_model['_id'],
         "date": datetime.datetime.utcnow(),
     }
 
+    nba_predictions = client.nbaDB.predictions
     nba_predictions.insert_one(to_save)
 
     body = {
-        "message": to_save,
+        "message": 'prediction: ' + to_save['prediction'],
         "input": event
     }
 
