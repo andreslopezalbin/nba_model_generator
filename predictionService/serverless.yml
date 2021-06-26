@@ -22,6 +22,7 @@ functions:
       - http:
           path: predict
           method: post
+          cors: true
   train:
     handler: handler.train
     layers:
@@ -29,6 +30,7 @@ functions:
     timeout: 300 # optional, in seconds, default is 6
     events:
         - http: GET train
+          cors: true
 #    events:
 #      - http:
 #          path: users/create
