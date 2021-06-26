@@ -182,6 +182,10 @@ def predict(event, context):
 
     response = {
         "statusCode": 200,
+        "headers": {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Credentials': True,
+        },
         "body": json.dumps(body)
     }
 
