@@ -30,14 +30,14 @@ def train(event, context):
     # Calculo de la clase a predecir
     train_df['PLUS_MINUS'] = train_df['HOME_PTS'] - train_df['VISITOR_PTS']
 
+    # Se eliminan los registros que no dispongan de los datos de los dos equipos
+    train_df = train_df[(train_df.HOME_TEAM_ID.notnull()) & (train_df.VISITOR_TEAM_ID.notnull())]
+
     # Limpieza de literales y parámetros que pueden interferir con los resultados del experimento.
     train_df = train_df.drop(
         ['GAME_ID', 'SEASON_ID', 'HOME_WL', 'VISITOR_WL', 'HOME_PTS', 'VISITOR_PTS', 'GAME_DATE', 'MATCHUP',
-         'HOME_TEAM_ABBREVIATION', 'VISITOR_TEAM_ABBREVIATION', 'HOME_TEAM_NAME', 'VISITOR_TEAM_NAME'], axis=1)
-
-    # Se eliminan los registros que no dispongan de los datos de los dos equipos
-    train_df = train_df[(train_df.HOME_TEAM_ID.notnull()) & (train_df.VISITOR_TEAM_ID.notnull())]
-    train_df = train_df.astype({'HOME_TEAM_ID': 'int64', 'VISITOR_TEAM_ID': 'int64'})
+         'HOME_TEAM_ABBREVIATION', 'VISITOR_TEAM_ABBREVIATION', 'HOME_TEAM_NAME', 'VISITOR_TEAM_NAME',  'HOME_TEAM_ID',
+         'VISITOR_TEAM_ID'], axis=1)
 
     # En caso de que una estadística este vacía, esta se rellena con la media del dataset.
     for col in train_df.columns:
@@ -47,7 +47,7 @@ def train(event, context):
             train_df[col] = train_df[[col]].fillna(media_col)
 
     # Se recorre cada una de las columnas escalando sus valores.
-    not_standardize = [ 'HOME_TEAM_ID', 'VISITOR_TEAM_ID', 'PLUS_MINUS']
+    not_standardize = ['PLUS_MINUS']
     for col in train_df.columns:
         if col not in not_standardize:
             train_df[col] = StandardScaler().fit_transform(train_df[[col]])
