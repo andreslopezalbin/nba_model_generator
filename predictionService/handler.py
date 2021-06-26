@@ -126,9 +126,8 @@ def train(event, context):
 
 
 def predict(event, context):
-
-    home_team = event['home']
-    visitor_team = event['visitor']
+    home_team = json.loads(event['body'])['home']
+    visitor_team = json.loads(event['body'])['visitor']
 
     df = get_dataset()
     df = df.drop(
