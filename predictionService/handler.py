@@ -170,6 +170,7 @@ def predict(event, context):
         "prediction": ' ,'.join([str(elem) for elem in prediction]),
         "model": active_model['_id'],
         "date": datetime.datetime.utcnow(),
+        "client": json.loads(event['body'])['client']
     }
 
     nba_predictions = client.nbaDB.predictions
