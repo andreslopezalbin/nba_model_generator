@@ -126,9 +126,9 @@ def train(event, context):
 
 
 def predict(event, context):
-    home_team = json.loads(event['body'])['home']
-    visitor_team = json.loads(event['body'])['visitor']
-    print(event['queryStringParameters'])
+    query_params = event['queryStringParameters']
+    home_team = query_params['homeTeam']
+    visitor_team = query_params['visitorTeam']
 
     df = get_dataset()
     df = df.drop(
@@ -171,7 +171,7 @@ def predict(event, context):
         "prediction": ' ,'.join([str(elem) for elem in prediction]),
         "model": active_model['_id'],
         "date": datetime.datetime.utcnow(),
-        "client": json.loads(event['body'])['client']
+        "client": query_params['client']
     }
 
     nba_predictions = client.nbaDB.predictions
