@@ -37,9 +37,7 @@ functions:
             parameters:
               querystrings:
                 homeTeam: true
-              headers:
                 visitorTeam: true
-              paths:
                 client: true
   train:
     handler: handler.train
