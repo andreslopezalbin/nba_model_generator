@@ -13,6 +13,16 @@ package:
 
 
 functions:
+#  predict:
+#    handler: handler.predict
+#    layers:
+#      - {Ref: PythonRequirementsLambdaLayer}
+#    timeout: 90
+#    events:
+#      - http:
+#          path: predict
+#          method: post
+#          cors: true
   predict:
     handler: handler.predict
     layers:
@@ -21,8 +31,16 @@ functions:
     events:
       - http:
           path: predict
-          method: post
+          method: GET
           cors: true
+          request:
+            parameters:
+              querystrings:
+                homeTeam: true
+              headers:
+                visitorTeam: true
+              paths:
+                client: true
   train:
     handler: handler.train
     layers:

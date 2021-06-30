@@ -128,6 +128,7 @@ def train(event, context):
 def predict(event, context):
     home_team = json.loads(event['body'])['home']
     visitor_team = json.loads(event['body'])['visitor']
+    print(event['queryStringParameters'])
 
     df = get_dataset()
     df = df.drop(
