@@ -102,6 +102,7 @@ def train(event, context):
         "model": pickled_model,
         "date": datetime.datetime.utcnow(),
         "active": active,
+        "replaces": active_model['_id'] if active else "-",
         "scores": {
             "R2": r2,
             "MAE": mae,
